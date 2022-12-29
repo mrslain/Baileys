@@ -5,7 +5,7 @@ import { WACallEvent } from './Call'
 import { Chat, ChatUpdate, PresenceData } from './Chat'
 import { Contact } from './Contact'
 import { GroupMetadata, ParticipantAction } from './GroupMetadata'
-import { MessageUpsertType, MessageUserReceiptUpdate, WAMessage, WAMessageKey, WAMessageUpdate } from './Message'
+import { MessageUpsertType, MessageUserReceiptUpdate, WALabelEditUpdate, WAMessage, WAMessageKey, WAMessageUpdate } from './Message'
 import { ConnectionState } from './State'
 
 export type BaileysEventMap = {
@@ -35,6 +35,9 @@ export type BaileysEventMap = {
     'messages.delete': { keys: WAMessageKey[] } | { jid: string, all: true }
     'messages.update': WAMessageUpdate[]
     'messages.media-update': { key: WAMessageKey, media?: { ciphertext: Uint8Array, iv: Uint8Array }, error?: Boom }[]
+
+    'labels.update': WALabelEditUpdate[]
+    'labels.delete': { keys: string[] } | { key: string } | { all: true }
     /**
      * add/update the given messages. If they were received while the connection was online,
      * the update will have type: "notify"
@@ -73,7 +76,9 @@ export type BufferedEventData = {
     messageUpdates: { [key: string]: WAMessageUpdate }
     messageDeletes: { [key: string]: WAMessageKey }
     messageReactions: { [key: string]: { key: WAMessageKey, reactions: proto.IReaction[] } }
-    messageReceipts: { [key: string]: { key: WAMessageKey, userReceipt: proto.IUserReceipt[] } },
+    messageReceipts: { [key: string]: { key: WAMessageKey, userReceipt: proto.IUserReceipt[] } }
+    labelUpdates: { [key: string]: WALabelEditUpdate }
+    labelDeletes: string[]
     groupUpdates: { [jid: string]: Partial<GroupMetadata> }
 }
 

@@ -11,6 +11,8 @@ export { proto as WAProto }
 export type WAMessage = proto.IWebMessageInfo
 export type WAMessageContent = proto.IMessage
 export type WAContactMessage = proto.Message.IContactMessage
+export type WALabelEdit = proto.SyncActionValue.ILabelEditAction
+export type WALabelAssociation = proto.SyncActionValue.ILabelAssociationAction
 export type WAContactsArrayMessage = proto.Message.IContactsArrayMessage
 export type WAMessageKey = proto.IMessageKey
 export type WATextMessage = proto.Message.IExtendedTextMessage
@@ -220,6 +222,8 @@ export type MessageUpsertType = 'append' | 'notify'
 export type MessageUserReceipt = proto.IUserReceipt
 
 export type WAMessageUpdate = { update: Partial<WAMessage>, key: proto.IMessageKey }
+
+export type WALabelEditUpdate = { update: Partial<WALabelEdit>, key: string }
 
 export type WAMessageCursor = { before: WAMessageKey | undefined } | { after: WAMessageKey | undefined }
 

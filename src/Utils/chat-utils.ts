@@ -594,6 +594,18 @@ export const chatModificationToAppPatch = (
 			apiVersion: 6,
 			operation: OP.SET
 		}
+	} else if('labelAssociation' in mod) {
+		patch = {
+			syncAction: {
+				labelAssociationAction: {
+					labeled: mod.labelAssociation.labeled,
+				},
+			},
+			index: ['label_jid', mod.labelAssociation.index, jid],
+			type: 'regular',
+			apiVersion: 3,
+			operation: OP.SET,
+		}
 	} else if('pushNameSetting' in mod) {
 		patch = {
 			syncAction: {
@@ -715,6 +727,29 @@ export const processSyncAction = (
 		if(accountSettings) {
 			accountSettings.unarchiveChats = unarchiveChats
 		}
+	} else if(action?.labelEditAction) {
+		console.log(id, msgId, action?.labelEditAction!)
+
+		if(!action?.labelEditAction!.predefinedId) {
+			action.labelEditAction.predefinedId = parseInt(id)
+		}
+
+		const { deleted } = action?.labelEditAction!
+		if(deleted) {
+			return ev.emit('labels.delete', {
+				key: id,
+			})
+		}
+
+		ev.emit('labels.update', [
+			{
+				key: id,
+				update: action?.labelEditAction!,
+			},
+		])
+	} else if(action?.labelAssociationAction) {
+		// TODO: make save labelAssociation in store and create getChatLabels method
+		// console.log(id, msgId, action?.labelAssociationAction!)
 	} else if(action?.starAction || type === 'star') {
 		let starred = action?.starAction?.starred
 		if(typeof starred !== 'boolean') {
