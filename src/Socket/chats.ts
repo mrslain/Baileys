@@ -1,7 +1,7 @@
 import { Boom } from '@hapi/boom'
 import { proto } from '../../WAProto'
 import { PROCESSABLE_HISTORY_TYPES } from '../Defaults'
-import { ALL_WA_PATCH_NAMES, ChatModification, ChatMutation, LTHashState, MessageUpsertType, PresenceData, SocketConfig, WABusinessHoursConfig, WABusinessProfile, WAMediaUpload, WAMessage, WAPatchCreate, WAPatchName, WAPresence } from '../Types'
+import { ALL_WA_PATCH_NAMES, ChatModification, ChatMutation, LTHashState, MessageUpsertType, PresenceData, SocketConfig, WABusinessHoursConfig, WABusinessProfile, WALabelEdit, WAMediaUpload, WAMessage, WAPatchCreate, WAPatchName, WAPresence } from '../Types'
 import { chatModificationToAppPatch, ChatMutationMap, decodePatches, decodeSyncdSnapshot, encodeSyncdPatch, extractSyncdPatches, generateProfilePicture, getHistoryMsg, newLTHashState, processSyncAction } from '../Utils'
 import { makeMutex } from '../Utils/make-mutex'
 import processMessage from '../Utils/process-message'
@@ -700,6 +700,26 @@ export const makeChatsSocket = (config: SocketConfig) => {
 		return appPatch(patch)
 	}
 
+	const setLabels = (labels: WALabelEdit[], jid: string, isDelete: boolean = false) => {
+		const promises: Promise<void>[] = []
+
+		for(const label of labels) {
+			promises.push(
+				chatModify(
+					{
+						labelAssociation: {
+							labeled: !isDelete,
+							index: label?.predefinedId?.toString()!,
+						},
+					},
+					jid
+				)
+			)
+		}
+
+		return Promise.all(promises)
+	}
+
 	/**
 	 * queries need to be fired on connection open
 	 * help ensure parity with WA Web
@@ -859,6 +879,7 @@ export const makeChatsSocket = (config: SocketConfig) => {
 		updateBlockStatus,
 		getBusinessProfile,
 		resyncAppState,
-		chatModify
+		chatModify,
+		setLabels
 	}
 }

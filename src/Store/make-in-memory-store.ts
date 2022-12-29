@@ -4,7 +4,7 @@ import type { Logger } from 'pino'
 import { proto } from '../../WAProto'
 import { DEFAULT_CONNECTION_CONFIG } from '../Defaults'
 import type makeMDSocket from '../Socket'
-import type { BaileysEventEmitter, Chat, ConnectionState, Contact, GroupMetadata, PresenceData, WAMessage, WAMessageCursor, WAMessageKey } from '../Types'
+import type { BaileysEventEmitter, Chat, ConnectionState, Contact, GroupMetadata, PresenceData, WALabelEdit, WAMessage, WAMessageCursor, WAMessageKey } from '../Types'
 import { toNumber, updateMessageWithReaction, updateMessageWithReceipt } from '../Utils'
 import { jidNormalizedUser } from '../WABinary'
 import makeOrderedDictionary from './make-ordered-dictionary'
@@ -17,6 +17,7 @@ export const waChatKey = (pin: boolean) => ({
 })
 
 export const waMessageID = (m: WAMessage) => m.key.id || ''
+export const waPredefinedID = (m: WALabelEdit) => m.predefinedId?.toString() || ''
 
 export type BaileysInMemoryStoreConfig = {
 	chatKey?: Comparable<Chat, string>
@@ -24,6 +25,7 @@ export type BaileysInMemoryStoreConfig = {
 }
 
 const makeMessagesDictionary = () => makeOrderedDictionary(waMessageID)
+const makeLabelsDictionary = () => makeOrderedDictionary(waPredefinedID)
 
 export default (
 	{ logger: _logger, chatKey }: BaileysInMemoryStoreConfig
@@ -35,6 +37,7 @@ export default (
 	const chats = new KeyedDB(chatKey, c => c.id)
 	const messages: { [_: string]: ReturnType<typeof makeMessagesDictionary> } = { }
 	const contacts: { [_: string]: Contact } = { }
+	const labels: ReturnType<typeof makeLabelsDictionary> = makeLabelsDictionary()
 	const groupMetadata: { [_: string]: GroupMetadata } = { }
 	const presences: { [id: string]: { [participant: string]: PresenceData } } = { }
 	const state: ConnectionState = { connection: 'close' }
@@ -188,6 +191,22 @@ export default (
 			}
 		})
 
+		ev.on('labels.update', updates => {
+			for(const { update } of updates) {
+				labels.upsert(update, 'append')
+			}
+		})
+		ev.on('labels.delete', item => {
+			if('all' in item) {
+				labels.clear()
+			} else if('key' in item) {
+				labels.filter((m) => (m.predefinedId?.toString() || '') !== item.key)
+			} else if('keys' in item) {
+				const idSet = new Set(item.keys)
+				labels.filter((m) => !idSet.has(m.predefinedId?.toString() || ''))
+			}
+		})
+
 		ev.on('groups.update', updates => {
 			for(const update of updates) {
 				const id = update.id!
@@ -246,16 +265,23 @@ export default (
 	const toJSON = () => ({
 		chats,
 		contacts,
-		messages
+		messages,
+		labels
 	})
 
-	const fromJSON = (json: { chats: Chat[], contacts: { [id: string]: Contact }, messages: { [id: string]: WAMessage[] } }) => {
+	const fromJSON = (json: { chats: Chat[], contacts: { [id: string]: Contact }, messages: { [id: string]: WAMessage[] }, labels: WALabelEdit[]}) => {
 		chats.upsert(...json.chats)
 		contactsUpsert(Object.values(json.contacts))
 		for(const jid in json.messages) {
 			const list = assertMessageList(jid)
 			for(const msg of json.messages[jid]) {
 				list.upsert(proto.WebMessageInfo.fromObject(msg), 'append')
+			}
+		}
+
+		if(json.labels) {
+			for(const label of json.labels) {
+				labels.upsert(label, 'append')
 			}
 		}
 	}
@@ -296,6 +322,7 @@ export default (
 			return messages
 		},
 		loadMessage: async(jid: string, id: string) => messages[jid]?.get(id),
+		getLabels: () => labels.array,
 		mostRecentMessage: async(jid: string) => {
 			const message: WAMessage | undefined = messages[jid]?.array.slice(-1)[0]
 			return message

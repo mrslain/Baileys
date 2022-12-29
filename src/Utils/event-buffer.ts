@@ -11,6 +11,8 @@ const BUFFERABLE_EVENT = [
 	'chats.upsert',
 	'chats.update',
 	'chats.delete',
+	'labels.update',
+	'labels.delete',
 	'contacts.upsert',
 	'contacts.update',
 	'messages.upsert',
@@ -179,6 +181,8 @@ const makeBufferData = (): BufferedEventData => {
 		messageReactions: { },
 		messageDeletes: { },
 		messageReceipts: { },
+		labelUpdates: { },
+		labelDeletes: [],
 		groupUpdates: { }
 	}
 }
@@ -307,6 +311,25 @@ function append<E extends BufferableEvent>(
 			if(data.historySets.chats[chatId]) {
 				delete data.historySets.chats[chatId]
 			}
+		}
+
+		break
+	case 'labels.update':
+		const labelUpdates = eventData as BaileysEventMap['labels.update']
+		for(const { key, update } of labelUpdates) {
+			const labelUpdates = data.labelUpdates[key] || { key, update: {} }
+			Object.assign(labelUpdates.update, update)
+			data.labelUpdates[key] = labelUpdates
+		}
+
+		break
+	case 'labels.delete':
+		const deleteLabelsData = eventData as BaileysEventMap['labels.delete']
+		if('keys' in deleteLabelsData) {
+			const { keys } = deleteLabelsData
+		    data.labelDeletes.push(...keys)
+		} else if('key' in deleteLabelsData) {
+			data.labelDeletes.push(deleteLabelsData.key)
 		}
 
 		break
@@ -538,6 +561,16 @@ function consolidateEvents(data: BufferedEventData) {
 	const chatDeleteList = Array.from(data.chatDeletes)
 	if(chatDeleteList.length) {
 		map['chats.delete'] = chatDeleteList
+	}
+
+	const labelUpdateList = Object.values(data.labelUpdates)
+	if(labelUpdateList.length) {
+		map['labels.update'] = labelUpdateList
+	}
+
+	const labelDeleteList = data.labelDeletes
+	if(labelDeleteList) {
+		map['labels.delete'] = { keys: labelDeleteList }
 	}
 
 	const messageUpsertList = Object.values(data.messageUpserts)

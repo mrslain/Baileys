@@ -82,6 +82,12 @@ export type ChatModification =
         markRead: boolean
         lastMessages: LastMessageList
     }
+    | {
+      labelAssociation: {
+        labeled: boolean
+        index: string
+      }
+    }
     | { delete: true, lastMessages: LastMessageList }
 
 export type InitialReceivedChatsState = {

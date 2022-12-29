@@ -89,6 +89,22 @@ const startSock = async() => {
 					}
 				}
 
+				if(connection === 'open') {
+					setTimeout(async() => {
+						// Get labels
+						const labels = store?.getLabels()
+						console.log('Get Labels: ', labels)
+
+						// Find label
+						const label = labels?.find((l) => l.name === 'Новый заказ')
+
+						if(label) {
+							// Set labels
+							await sock.setLabels([label], '77775481542-1569679741@g.us')
+						}
+					}, 10000)
+				}
+
 				console.log('connection update', update)
 			}
 
